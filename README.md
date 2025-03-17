@@ -12,6 +12,7 @@
 No se implementan prohibiciones de atributos presentados en la misma task ni set.
 
 Se satisfacen las siguientes condiciones:
+![image](https://github.com/user-attachments/assets/d5faa35b-871a-4ca3-8627-1e3cee6cc4c9)
 
 
 El objetivo es que los datos procesados luego se procesen con HB (hierarchical Bayer)
