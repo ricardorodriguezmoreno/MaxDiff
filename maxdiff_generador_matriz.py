@@ -6,6 +6,7 @@ import time
 import datetime
 
 def calcula_lambda_y_r(num_tasks,num_items_X_task,num_items):
+    """Calcula las condiciones lambda y r que deben satisfacer los diseños generados"""
     r=(num_tasks*num_items_X_task)//num_items
     lambd=r*(num_items_X_task-1)//(num_items-1)
     print("r: ",r)
@@ -13,6 +14,20 @@ def calcula_lambda_y_r(num_tasks,num_items_X_task,num_items):
 
     return r, lambd
 
+#def hace_conteos_de_one_way_frequencies(one_way_frequencies,item_count):
+#    """Agrega a los conteos totales de cada atributo en todas las versiones del diseño"""
+#    for key, value in item_count.values():
+#        one_way_frequencies[int(key)]+=value
+
+#    return one_way_frequencies
+
+#def hace_conteos_de_two_way_frequencies(two_way_frequencies_matrix,bibd):
+#    """Agrega a los conteos totales de cada pareja de atributos en todas las versiones del diseño"""
+#    for num_task, task in enumerate(bibd):
+#        for item in task:
+#            two_way_frequencies_matrix    
+
+#    return two_way_frequencies_matrix
 
 def ejecutador_principal(num_items, num_tasks, num_items_x_task, num_versiones,seed):
     """Revisa que los inputs sean válidos y trata de ejecutar el generador principal"""
@@ -46,7 +61,15 @@ def ejecutador_principal(num_items, num_tasks, num_items_x_task, num_versiones,s
     
 
 def generate_multiple_versions(num_items, num_tasks, num_items_x_task, num_versions,seed):
-    """Generate multiple versions of the BIBD with dynamic λ and r calculation."""
+    """Generate multiple versions of the BIBD with dynamic λ and r calculation. Nota: también calcula y muestra las frecuencias individuales de atributo y frecuencias de parejas en una matriz de num_items x num_items"""     
+    
+    one_way_frequencies={}
+    for i in range(0,num_items):
+        one_way_frequencies[i+1]=0
+
+    two_way_frequencies_row=[0]*num_items
+    two_way_frequencies_matrix=[two_way_frequencies_row]*num_items
+
     error=False
     versions = set()
     r, lambda_val = calcula_lambda_y_r(num_tasks,num_items_x_task,num_items)
@@ -59,10 +82,13 @@ def generate_multiple_versions(num_items, num_tasks, num_items_x_task, num_versi
         rng = np.random.default_rng(seed=seed) # Regenera la aleatoriedad
 
         while bibd is None and attempts < 200:  # 100 reintentos se permiten
-            bibd = generate_bibd(num_items, num_tasks, num_items_x_task, r, lambda_val,rng)
+            bibd = generate_bibd(num_items, num_tasks, num_items_x_task, r, lambda_val,rng)[0]
+            print(bibd)
             attempts += 1   
         if bibd and bibd not in versions:
             versions.add(bibd)
+            #one_way_frequencies=hace_conteos_de_one_way_frequencies(one_way_frequencies,bibd[1])
+            #two_way_frequencies_matrix=hace_conteos_de_two_way_frequencies(two_way_frequencies_matrix,bibd)
             print(f"Éxito generando la versión {version+1}.")
         else:
             print(f"Warning: no se puede generar una versión {version+1} única después de 200 intentos. Los bloques que se intentaron generar no cumplen las condiciones de las ecuaciones que definen a (r, λ). Revisar parámetros de diseño.")
@@ -70,7 +96,10 @@ def generate_multiple_versions(num_items, num_tasks, num_items_x_task, num_versi
             error=True
             break
 
-    return versions, r, lambda_val,error
+    print(one_way_frequencies)
+    input("xxxx")
+
+    return versions, r, lambda_val,error,one_way_frequencies
 
 
 def generate_bibd(num_items, num_tasks, num_items_x_task, r, lambda_val,rng):
@@ -83,9 +112,10 @@ def generate_bibd(num_items, num_tasks, num_items_x_task, r, lambda_val,rng):
 
     for intento in range(max_intentos):
         selected_blocks = tuple(map(tuple, rng.choice(all_combinations, num_tasks, replace=False))) #ChatGPT dice que usar tuplas para guardar sets
-        if is_valid_bibd(selected_blocks,r, lambda_val):
-            return selected_blocks
-    
+        if is_valid_bibd(selected_blocks,r, lambda_val): # Si la condición lógica que es el primer output de is_valid_bibd se cumple, es porque el bloque es válido
+            print("asd")
+            return selected_blocks #,is_valid_bibd[1],is_valid_bibd[2] # Se retorna el bloque válido generado, el conteo one-way de items y el conteo de parejas totales de items
+
     return None
 
 
@@ -101,10 +131,15 @@ def is_valid_bibd(blocks, r, lambda_val):
             sum_pair_counts_igual_lambda+=1    
 
     #print(f"Conteo de lambdas:{sum_pair_counts_igual_lambda}\n")
-    #print(f"Conteo de items tests: {item_counts}\n")
+    print(f"Conteo de items tests: {item_counts}")
     #print(f"Conteo de pair tests: {pair_counts}\n")
-    return (all (count == r or count ==(r-1) or count ==(r+1) for count in item_counts.values()) and sum_pair_counts_igual_lambda>=num_pair_counts_minimos_igual_a_lambda)
-    #return (all (count == r or count ==(r+1) for count in item_counts.values()) and sum_pair_counts_igual_lambda>=num_pair_counts_minimos_igual_a_lambda)
+
+    print(f"{all (count == r or count ==(r-1) or count ==(r+1) for count in item_counts.values())}\n")
+    #print(sum_pair_counts_igual_lambda>=num_pair_counts_minimos_igual_a_lambda)
+
+    return all (count == r or count ==(r-1) or count ==(r+1) for count in item_counts.values()) and sum_pair_counts_igual_lambda>=num_pair_counts_minimos_igual_a_lambda # Menos exigente en el one-way balance
+    #return (all (count == r or count ==(r-1) or count ==(r+1) for count in item_counts.values()) and sum_pair_counts_igual_lambda>=num_pair_counts_minimos_igual_a_lambda),item_counts,pair_counts # Menos exigente en el one-way balance
+    #return (all (count == r or count ==(r+1) for count in item_counts.values()) and sum_pair_counts_igual_lambda>=num_pair_counts_minimos_igual_a_lambda),item_counts,pair_counts # Más exigente en el one-way balance
 
 
 def imprime_matriz(total_versiones):
